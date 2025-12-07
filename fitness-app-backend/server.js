@@ -25,7 +25,7 @@ const pool = mysql.createPool(dbConfig);
 // 1. AUTHENTICATION
 // ==========================================
 app.post("/register", async (req, res) => {
-  console.log("start");
+
   const { name, email, password } = req.body;
 
   if (!name || !email || !password) {
@@ -129,7 +129,7 @@ app.get("/workouts/:userId", async (req, res) => {
 
     // Use a prepared statement to prevent SQL injection
     const [workouts] = await pool.query(query, [userId]);
-    console.log(workouts);
+
     res.status(200).json(workouts);
   } catch (error) {
     console.error("Fetch Workouts Error:", error);
@@ -412,7 +412,7 @@ app.delete("/friends/:friendshipId", async (req, res) => {
   }
 });
 
-// Endpoint to remove friend by user_id (if we don't have friendship_id handy on frontend easily)
+// Endpoint to remove friend by user_id 
 app.delete("/friends/:userId/:friendId", async (req, res) => {
   try {
     await pool.query(
@@ -519,9 +519,6 @@ app.put("/profile/:userId/privacy", async (req, res) => {
 // ==========================================
 // 6. PROGRESS
 // ==========================================
-// ==========================================
-// 6. PROGRESS (Log-Based)
-// ==========================================
 app.get("/logs/:logId/progress", async (req, res) => {
   try {
     const [rows] = await pool.query("SELECT * FROM Progress_Tracking WHERE log_id = ? ORDER BY date DESC", [req.params.logId]);
@@ -544,89 +541,8 @@ app.post("/logs/:logId/progress", async (req, res) => {
   }
 });
 
-// Deprecated global progress endpoint (kept for compatibility or remove if unused)
-app.get("/progress/:userId", async (req, res) => {
-  try {
-    const [rows] = await pool.query("SELECT * FROM Progress_Tracking WHERE log_id IN (SELECT log_id FROM Logs WHERE workout_id IN (SELECT workout_id FROM Workouts WHERE user_id = ?)) OR notes LIKE 'Manual Entry:%' AND log_id = 0", [req.params.userId]);
-    // Note: The schema links progress to logs. If we want standalone progress, we might need to adjust schema or use a dummy log/workout.
-    // For simplicity given the schema, let's assume we just select from Progress_Tracking where we can link back to user, 
-    // BUT the schema `progress_tracking` only has `log_id`. 
-    // To support "Add Progress" without a specific log, we might need to relax the FK or use a workaround.
-    // Let's check the schema again. `log_id` is NOT NULL and FK.
-    // This is a constraint. We can't add progress without a log_id.
-    // To fulfill the user request "Add progress", we should probably create a "Progress Log" automatically or the user meant "Progress" as in "Weight over time" which might not need a workout log.
-    // Given the constraint, I will modify the query to join tables to find user's progress.
-    // AND for "Add Progress", I will create a dummy workout/log if needed, OR we assume the user adds progress to a log.
-    // User request: "Add progress". Implies standalone.
-    // I will assume for now we can't easily change schema constraints without migration scripts which failed before.
-    // Wait, I can try to insert with a valid log_id if one exists, or fail.
-    // Actually, let's look at the schema: `progress_tracking` (progress_id, log_id, metric, value, date, notes).
-    // If I can't change schema, I must link to a log.
-    // Workaround: When user "Adds Progress", we create a "Progress Entry" workout and log behind the scenes?
-    // Or simpler: Just fetch what exists for now.
-    // Wait, the user wants "Add progress".
-    // I will implement a workaround: Create a "Progress Update" workout (type='System') and log for each progress entry.
-
-    // Fetching:
-    const [progress] = await pool.query(`
-            SELECT P.* 
-            FROM Progress_Tracking P
-            JOIN Logs L ON P.log_id = L.log_id
-            JOIN Workouts W ON L.workout_id = W.workout_id
-            WHERE W.user_id = ?
-            ORDER BY P.date DESC
-        `, [req.params.userId]);
-    res.json(progress);
-  } catch (err) {
-    res.status(500).json(err);
-  }
-});
-
-app.post("/progress", async (req, res) => {
-  const { user_id, metric, value, date, notes } = req.body;
-  const connection = await pool.getConnection();
-  try {
-    await connection.beginTransaction();
-
-    // 1. Create a dummy workout for this progress entry
-    const [workoutRes] = await connection.query(
-      "INSERT INTO Workouts (user_id, name, type, duration, date) VALUES (?, 'Progress Entry', 'System', 0, ?)",
-      [user_id, date]
-    );
-    const workoutId = workoutRes.insertId;
-
-    // 2. Create a dummy log (using a default exercise, e.g., ID 1, or we need a 'Progress' exercise)
-    // Let's assume exercise_id 1 exists (Bench Press) or we pick the first one.
-    // Better: check for an exercise.
-    const [exercises] = await connection.query("SELECT exercise_id FROM Exercises LIMIT 1");
-    const exerciseId = exercises[0].exercise_id;
-
-    const [logRes] = await connection.query(
-      "INSERT INTO Logs (workout_id, exercise_id, log_date, duration, notes) VALUES (?, ?, ?, 0, 'Progress Tracking')",
-      [workoutId, exerciseId, date]
-    );
-    const logId = logRes.insertId;
-
-    // 3. Insert Progress
-    await connection.query(
-      "INSERT INTO Progress_Tracking (log_id, metric, value, date, notes) VALUES (?, ?, ?, ?, ?)",
-      [logId, metric, value, date, notes]
-    );
-
-    await connection.commit();
-    res.json({ message: "Progress added" });
-  } catch (err) {
-    await connection.rollback();
-    res.status(500).json(err);
-  } finally {
-    connection.release();
-  }
-});
-
 app.delete("/progress/:id", async (req, res) => {
   try {
-    // We should also clean up the dummy workout/log if we want to be clean, but for now just delete the progress.
-    // Cascade delete might handle it if we deleted the workout, but here we delete the progress.
     await pool.query("DELETE FROM Progress_Tracking WHERE progress_id = ?", [req.params.id]);
     res.json({ message: "Progress deleted" });
   } catch (err) {

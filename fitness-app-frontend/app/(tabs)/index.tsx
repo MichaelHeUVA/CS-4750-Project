@@ -187,7 +187,6 @@ export default function App() {
     fetchFriends(userId);
     fetchFriendRequests(userId);
     fetchProfile(userId);
-    fetchProgress(userId);
     fetchExercises();
     fetchCategories();
   };
@@ -268,10 +267,6 @@ export default function App() {
   const fetchProfile = async (uid: number) => {
     const res = await axios.get(`${API_URL}/profile/${uid}`);
     setProfileData(res.data);
-  };
-  const fetchProgress = async (uid: number) => {
-    const res = await axios.get(`${API_URL}/progress/${uid}`);
-    setProgress(res.data);
   };
   const fetchExercises = async () => {
     const res = await axios.get(`${API_URL}/exercises`);
@@ -391,33 +386,6 @@ export default function App() {
     if (!user) return;
     await axios.delete(`${API_URL}/workouts/${id}`);
     fetchWorkouts(user.user_id);
-  };
-
-  const addProgress = async () => {
-    if (!user || !newProgressMetric || !newProgressValue) return;
-
-    // Date validation
-    if (newProgressDate && !/^\d{4}-\d{2}-\d{2}$/.test(newProgressDate)) {
-      Alert.alert("Error", "Date must be YYYY-MM-DD");
-      return;
-    }
-    await axios.post(`${API_URL}/progress`, {
-      user_id: user.user_id,
-      metric: newProgressMetric,
-      value: newProgressValue,
-      date: newProgressDate || new Date().toISOString().split('T')[0],
-      notes: newProgressNotes
-    });
-    setNewProgressMetric("");
-    setNewProgressValue("");
-    setNewProgressNotes("");
-    fetchProgress(user.user_id);
-  };
-
-  const deleteProgress = async (id: number) => {
-    if (!user) return;
-    await axios.delete(`${API_URL}/progress/${id}`);
-    fetchProgress(user.user_id);
   };
 
   const dismissNotification = async (id: number) => {
