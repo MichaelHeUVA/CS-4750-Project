@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   StyleSheet,
   Text,
@@ -44,6 +44,13 @@ interface Friend {
 interface FriendRequest {
   friendship_id: number;
   user_id: number;
+  name: string;
+  email: string;
+}
+
+interface SentRequest {
+  friendship_id: number;
+  friend_id: number;
   name: string;
   email: string;
 }
@@ -96,7 +103,7 @@ interface FriendData {
 export default function App() {
   // --- GLOBAL STATE ---
   const [user, setUser] = useState<User | null>(null);
-  const [currentView, setCurrentView] = useState("workouts"); // 'workouts', 'goals', 'friends', 'profile', 'progress'
+  const [currentView, setCurrentView] = useState("workouts"); // 'workouts', 'goals', 'friends', 'profile'
 
   // --- AUTH STATE ---
   const [isLoginView, setIsLoginView] = useState(true);
@@ -109,6 +116,7 @@ export default function App() {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [friends, setFriends] = useState<Friend[]>([]);
   const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
+  const [sentRequests, setSentRequests] = useState<SentRequest[]>([]);
   const [profileData, setProfileData] = useState<ProfileData>({
     privacy: {
       share_workouts: 1,
@@ -251,6 +259,10 @@ export default function App() {
   const fetchFriendRequests = async (uid: number) => {
     const res = await axios.get(`${API_URL}/friends/requests/${uid}`);
     setFriendRequests(res.data);
+  };
+  const fetchSentRequests = async (uid: number) => {
+    const res = await axios.get(`${API_URL}/friends/requests/sent/${uid}`);
+    setSentRequests(res.data);
   };
   const fetchProfile = async (uid: number) => {
     const res = await axios.get(`${API_URL}/profile/${uid}`);
@@ -444,6 +456,7 @@ export default function App() {
       Alert.alert("Sent", "Friend request sent!");
       setSearchResults([]);
       setFriendSearch("");
+      fetchSentRequests(user.user_id);
     } catch (err) {
       Alert.alert("Error", "Cannot add friend");
     }
@@ -460,6 +473,18 @@ export default function App() {
     if (!user) return;
     await axios.delete(`${API_URL}/friends/${user.user_id}/${friendId}`);
     fetchFriends(user.user_id);
+  };
+
+  const cancelRequest = async (friendshipId: number) => {
+    if (!user) return;
+    await axios.delete(`${API_URL}/friends/${friendshipId}`);
+    fetchSentRequests(user.user_id);
+  };
+
+  const rejectRequest = async (friendshipId: number) => {
+    if (!user) return;
+    await axios.delete(`${API_URL}/friends/${friendshipId}`);
+    fetchFriendRequests(user.user_id);
   };
 
   const viewFriendData = async (friend: Friend) => {
@@ -479,7 +504,22 @@ export default function App() {
   };
 
   // ===========================================
-  // 5. RENDER SCREENS
+  // 5. EFFECT FOR DATA REFRESH
+  // ===========================================
+  useEffect(() => {
+    if (!user) return;
+    if (currentView === "workouts") fetchWorkouts(user.user_id);
+    if (currentView === "goals") fetchGoals(user.user_id);
+    if (currentView === "friends") {
+      fetchFriends(user.user_id);
+      fetchFriendRequests(user.user_id);
+      fetchSentRequests(user.user_id);
+    }
+    if (currentView === "profile") fetchProfile(user.user_id);
+  }, [currentView, user]);
+
+  // ===========================================
+  // 6. RENDER SCREENS
   // ===========================================
   const renderLogin = () => (
     <View style={styles.centerContainer}>
@@ -623,8 +663,28 @@ export default function App() {
           {friendRequests.map(r => (
             <View key={r.friendship_id} style={styles.card}>
               <Text style={styles.cardTitle}>{r.name}</Text>
-              <TouchableOpacity onPress={() => acceptFriend(r.friendship_id)}>
-                <Text style={styles.linkText}>Accept Request</Text>
+              <View style={{ flexDirection: 'row' }}>
+                <TouchableOpacity onPress={() => acceptFriend(r.friendship_id)} style={{ marginRight: 15 }}>
+                  <Text style={styles.linkText}>Accept</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => rejectRequest(r.friendship_id)}>
+                  <Text style={[styles.linkText, { color: 'red' }]}>Reject</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))}
+        </View>
+      )}
+
+      {sentRequests.length > 0 && (
+        <View>
+          <Text style={styles.headerTitle}>Sent Requests</Text>
+          {sentRequests.map(r => (
+            <View key={r.friendship_id} style={styles.card}>
+              <Text style={styles.cardTitle}>{r.name}</Text>
+              <Text style={styles.cardSub}>{r.email}</Text>
+              <TouchableOpacity onPress={() => cancelRequest(r.friendship_id)}>
+                <Text style={[styles.linkText, { color: 'red' }]}>Cancel Request</Text>
               </TouchableOpacity>
             </View>
           ))}

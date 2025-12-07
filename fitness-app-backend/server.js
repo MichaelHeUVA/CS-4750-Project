@@ -353,6 +353,21 @@ app.get("/friends/requests/:userId", async (req, res) => {
   }
 });
 
+app.get("/friends/requests/sent/:userId", async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT F.friendship_id, U.user_id as friend_id, U.name, U.email 
+       FROM Friendship F
+       JOIN Users U ON F.user_id_2 = U.user_id
+       WHERE F.user_id = ? AND F.status = 'pending'`,
+      [req.params.userId]
+    );
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json(err);
+  }
+});
+
 app.post("/friends/request", async (req, res) => {
   const { user_id, friend_id } = req.body;
   try {
