@@ -109,7 +109,6 @@ export default function App() {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [friends, setFriends] = useState<Friend[]>([]);
   const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
-  const [progress, setProgress] = useState<Progress[]>([]);
   const [profileData, setProfileData] = useState<ProfileData>({
     privacy: {
       share_workouts: 1,
@@ -138,12 +137,6 @@ export default function App() {
   const [newGoalDate, setNewGoalDate] = useState(""); // YYYY-MM-DD
   const [friendSearch, setFriendSearch] = useState("");
   const [searchResults, setSearchResults] = useState<User[]>([]);
-
-  // Progress Inputs
-  const [newProgressMetric, setNewProgressMetric] = useState("");
-  const [newProgressValue, setNewProgressValue] = useState("");
-  const [newProgressDate, setNewProgressDate] = useState("");
-  const [newProgressNotes, setNewProgressNotes] = useState("");
 
   // Log Inputs
   const [selectedExerciseId, setSelectedExerciseId] = useState<number | null>(null);
@@ -203,7 +196,6 @@ export default function App() {
     setGoals([]);
     setFriends([]);
     setFriendRequests([]);
-    setProgress([]);
     setProfileData({ privacy: {}, notifications: [] });
     // Exercises and Categories can stay as they are global/static usually, but if user specific, reset. 
     // They seem to be fetched once. Let's keep them or reset if we want fresh fetch on next login.
@@ -228,10 +220,6 @@ export default function App() {
     setNewGoalDate("");
     setFriendSearch("");
     setSearchResults([]);
-    setNewProgressMetric("");
-    setNewProgressValue("");
-    setNewProgressDate("");
-    setNewProgressNotes("");
     setSelectedExerciseId(null);
     setSets("");
     setReps("");
@@ -438,7 +426,7 @@ export default function App() {
 
   const searchUsers = async (text: string) => {
     setFriendSearch(text);
-    if (text.length > 2 && user) {
+    if (text.length > 0 && user) {
       const res = await axios.get(`${API_URL}/users/search?q=${text}&userId=${user.user_id}`);
       setSearchResults(res.data);
     } else {
@@ -553,9 +541,6 @@ export default function App() {
       ))}
     </ScrollView>
   );
-
-  // renderProgress removed
-
 
   const renderGoals = () => (
     <ScrollView style={styles.viewContainer}>
