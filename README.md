@@ -60,19 +60,19 @@ This is a full-stack mobile fitness application designed to help users track the
 
 ### Database
 * **Database:** MySQL
-* **Hosting:** Google Cloud SQL (assumed/local)
+* **Hosting:** phpMyAdmin
 
 ## Setup Instructions
 
 ### Prerequisites
 * Node.js and npm installed.
 * phpMyAdmin is installed and running.
-* Expo Go app on your mobile device (or iOS Simulator/Android Emulator).
+* Expo Go app on mac (iOS Simulator).
 
 ### 1. Database Setup
-* Ensure your phpMyAdmin server is running.
+* Ensure phpMyAdmin server is running.
 * Create the database using the provided SQL schema.
-* Configure your database connection in the backend `.env` file.
+* Configure database connection in the backend `.env` file.
 
 ### 2. Backend Setup
 Navigate to the backend directory:
