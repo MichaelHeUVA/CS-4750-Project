@@ -90,6 +90,8 @@ node server.js
 The server will run on `http://localhost:3000`.
 
 ### 3. Frontend Setup
+Create an .env file and add the variable 
+EXPO_PUBLIC_API_URL="http://localhost:3000" (same URL as the server)
 Navigate to the frontend directory:
 ```bash
 cd fitness-app-frontend
